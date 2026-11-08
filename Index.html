@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sing Sing – refrängkort</title>
+<style>
+  :root {
+    --bg: #14101f;
+    --panel: #1f1a30;
+    --panel-2: #2a2342;
+    --text: #f5f1ff;
+    --muted: #a99fc4;
+    --accent: #ff4f8b;
+    --accent-2: #ffb347;
+    --ok: #3ddc97;
+    --warn: #ffcc4d;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  body { min-height: 100vh; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 20px 16px 60px; }
+  h1 { font-size: 2rem; margin: 8px 0 4px; letter-spacing: -0.02em; }
+  h1 span { background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+  h2 { font-size: 1.05rem; margin: 0 0 10px; }
+  p.lead { color: var(--muted); margin: 0 0 20px; }
+  .panel { background: var(--panel); border-radius: var(--radius); padding: 18px; margin-bottom: 16px; }
+  label { display: block; font-size: .85rem; color: var(--muted); margin: 10px 0 4px; }
+  input[type=text], textarea, select {
+    width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid #3a3157;
+    background: #120e1d; color: var(--text); font-size: 1rem; font-family: inherit; }
+  textarea { min-height: 140px; resize: vertical; }
+  button {
+    font: inherit; font-weight: 600; border: 0; border-radius: 999px; padding: 11px 18px;
+    cursor: pointer; background: var(--panel-2); color: var(--text); }
+  button.primary { background: linear-gradient(90deg, var(--accent), #ff6f61); color: white; }
+  button.spotify { background: #1db954; color: #08130c; }
+  button:disabled { opacity: .5; cursor: default; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 12px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tabs button { flex: 1; border-radius: 10px; }
+  .tabs button.active { background: var(--accent); color: white; }
+  .hint { font-size: .82rem; color: var(--muted); line-height: 1.45; }
+  .hint code { background: #120e1d; padding: 1px 6px; border-radius: 6px; color: var(--accent-2); }
+  details summary { cursor: pointer; color: var(--accent-2); font-size: .9rem; }
+  .status { margin-top: 12px; font-size: .9rem; color: var(--muted); }
+  .status.error { color: #ff7b7b; }
+  .progress { height: 8px; background: #120e1d; border-radius: 99px; overflow: hidden; margin-top: 10px; }
+  .progress > div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .2s; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .check { display: flex; gap: 8px; align-items: center; margin-top: 10px; color: var(--text); font-size: .95rem; }
+  .check input { width: 18px; height: 18px; }
+  .hidden { display: none !important; }
+
+  /* Game view */
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 8px; }
+  .counter { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .card {
+    position: relative; border-radius: 26px; padding: 26px 24px 20px; min-height: 440px;
+    background: linear-gradient(160deg, #ff4f8b 0%, #ff7a59 45%, #ffb347 100%);
+    color: #1b0f1f; box-shadow: 0 20px 50px rgba(255, 79, 139, .25);
+    display: flex; flex-direction: column; user-select: none; cursor: pointer;
+    touch-action: pan-y; }
+  .card .label { font-size: .75rem; text-transform: uppercase; letter-spacing: .14em; font-weight: 700; opacity: .7; }
+  .card .prompt { font-size: 1.75rem; line-height: 1.25; font-weight: 800; margin: 10px 0 18px; }
+  .card .divider { height: 3px; background: rgba(27, 15, 31, .25); border-radius: 3px; margin: 4px 0 16px; }
+  .card .continuation { font-size: 1.2rem; line-height: 1.45; font-weight: 600; transition: filter .25s, opacity .25s; }
+  .card .continuation.concealed { filter: blur(9px); opacity: .55; }
+  .card .tap-hint { font-size: .85rem; opacity: .7; margin-top: 8px; font-weight: 600; }
+  .card .meta { margin-top: auto; padding-top: 18px; font-size: .95rem; font-weight: 700;
+    display: flex; justify-content: space-between; gap: 10px; align-items: flex-end; }
+  .card .meta .song.concealed { filter: blur(7px); }
+  .card .badge { font-size: .72rem; background: rgba(27, 15, 31, .18); padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+  .card a { color: #1b0f1f; }
+  .controls { display: grid; grid-template-columns: 1fr 1.4fr 1fr; gap: 10px; margin-top: 16px; }
+  .controls button { padding: 14px 10px; }
+  .subcontrols { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 12px; }
+  .subcontrols button { font-size: .85rem; padding: 8px 14px; }
+
+  /* Edit chorus view */
+  .lyrics-list { max-height: 55vh; overflow: auto; background: #120e1d; border-radius: 12px; padding: 8px; margin-top: 10px; }
+  .lyrics-list div { padding: 6px 10px; border-radius: 8px; cursor: pointer; font-size: .95rem; }
+  .lyrics-list div:hover { background: var(--panel-2); }
+  .lyrics-list div.gap { height: 10px; padding: 0; cursor: default; }
+  .lyrics-list div.gap:hover { background: none; }
+  .lyrics-list div.in-chorus { background: rgba(255, 79, 139, .22); }
+  .lyrics-list div.chorus-start { background: var(--accent); color: white; }
+
+  .missing-list { font-size: .85rem; color: var(--muted); margin: 8px 0 0; padding-left: 18px; line-height: 1.5; }
+  .missing-list .why { opacity: .7; }
+  .summary-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #2f2748; font-size: .95rem; }
+  .summary-row.warn b { color: var(--warn); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ SETUP VIEW ============ -->
+  <section id="setupView">
+    <h1>Sing <span>Sing</span></h1>
+    <p class="lead">Lägg in en spellista så blir varje låt ett kort med början av refrängen överst och fortsättningen under.</p>
+
+    <div class="panel">
+      <div class="tabs">
+        <button id="tabSpotify" class="active">Spotify-lista</button>
+        <button id="tabText">Klistra in låtar</button>
+      </div>
+
+      <!-- Spotify source -->
+      <div id="sourceSpotify">
+        <label for="clientId">Spotify Client ID</label>
+        <input type="text" id="clientId" placeholder="t.ex. 3f2a9c…" autocomplete="off">
+        <details style="margin-top:8px">
+          <summary>Hur får jag ett Client ID?</summary>
+          <div class="hint" style="margin-top:8px">
+            1. Gå till <a href="https://developer.spotify.com/dashboard" style="color:var(--accent-2)">developer.spotify.com/dashboard</a> och logga in (kontot måste ha Premium).<br>
+            2. <b>Create app</b> → välj <b>Web API</b>.<br>
+            3. Lägg till denna Redirect URI exakt:<br><code id="redirectUriText"></code><br>
+            4. Kopiera <b>Client ID</b> och klistra in ovan.<br><br>
+            Sidan måste köras via <code>http://127.0.0.1:PORT</code> eller https – inte som fil direkt (file://).
+            Spotify släpper bara igenom spellistor du <b>äger eller samarbetar på</b>. Vill du köra någon annans lista: markera alla låtar och lägg dem i en egen spellista.
+          </div>
+        </details>
+
+        <div class="row">
+          <button id="loginBtn" class="spotify">Logga in med Spotify</button>
+          <span id="loginState" class="hint"></span>
+        </div>
+
+        <label for="playlistUrl">Länk till spellista</label>
+        <input type="text" id="playlistUrl" placeholder="https://open.spotify.com/playlist/…">
+        <div class="row">
+          <button id="loadSpotifyBtn" class="primary">Skapa kortlek</button>
+        </div>
+      </div>
+
+      <!-- Text source -->
+      <div id="sourceText" class="hidden">
+        <label for="trackText">En låt per rad: <b>Artist - Låttitel</b></label>
+        <textarea id="trackText" placeholder="ABBA - Dancing Queen&#10;Kent - Musik non stop&#10;Robyn - Dancing On My Own"></textarea>
+        <p class="hint">Funkar utan Spotify-konto och även om du öppnar filen direkt.</p>
+        <div class="row">
+          <button id="loadTextBtn" class="primary">Skapa kortlek</button>
+        </div>
+      </div>
+
+      <div class="progress hidden" id="progressBar"><div></div></div>
+      <div class="status" id="status"></div>
+      <ul class="missing-list hidden" id="missingList"></ul>
+    </div>
+
+    <div class="panel hidden" id="summaryPanel">
+      <h2>Resultat</h2>
+      <div id="summaryRows"></div>
+      <details id="lostDetails" class="hidden" style="margin-top:12px">
+        <summary>Visa låtar som inte blev kort (<span id="lostCount"></span>)</summary>
+        <ul class="missing-list" id="lostList"></ul>
+      </details>
+      <div class="row">
+        <button id="startGameBtn" class="primary">Starta spelet</button>
+        <button id="retryFailedBtn" class="hidden">Försök igen med de som inte svarade</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Inställningar</h2>
+      <div class="grid2">
+        <div>
+          <label for="promptCount">Rader överst på kortet</label>
+          <select id="promptCount">
+            <option value="1">1 rad</option>
+            <option value="2" selected>2 rader</option>
+            <option value="3">3 rader</option>
+          </select>
+        </div>
+        <div>
+          <label for="continuationCount">Rader i fortsättningen</label>
+          <select id="continuationCount">
+            <option value="2">2 rader</option>
+            <option value="3">3 rader</option>
+            <option value="4" selected>4 rader</option>
+            <option value="6">6 rader</option>
+          </select>
+        </div>
+      </div>
+      <label class="check"><input type="checkbox" id="hideSong" checked> Dölj låtnamn tills fortsättningen visas</label>
+      <label class="check"><input type="checkbox" id="includeUncertain" checked> Ta med låtar där refrängen är en gissning</label>
+    </div>
+
+    <div class="panel hidden" id="savedDeckPanel">
+      <h2>Sparad kortlek</h2>
+      <p class="hint" id="savedDeckInfo"></p>
+      <div class="row">
+        <button id="resumeBtn" class="primary">Fortsätt spela</button>
+        <button id="clearDeckBtn">Radera</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GAME VIEW ============ -->
+  <section id="gameView" class="hidden">
+    <div class="topbar">
+      <button id="backBtn">← Meny</button>
+      <span class="counter" id="counter"></span>
+      <button id="shuffleBtn">Blanda</button>
+    </div>
+
+    <div class="card" id="card">
+      <div class="label">Refrängen börjar</div>
+      <div class="prompt" id="cardPrompt"></div>
+      <div class="divider"></div>
+      <div class="label">Fortsättning</div>
+      <div class="continuation concealed" id="cardContinuation"></div>
+      <div class="tap-hint" id="tapHint">Tryck på kortet för att visa</div>
+      <div class="meta">
+        <div class="song concealed" id="cardSong"></div>
+        <span class="badge hidden" id="cardBadge">Gissad refräng</span>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="prevBtn">← Förra</button>
+      <button id="revealBtn" class="primary">Visa</button>
+      <button id="nextBtn">Nästa →</button>
+    </div>
+    <div class="subcontrols">
+      <button id="editBtn">Fel refräng? Justera</button>
+      <button id="removeBtn">Ta bort kortet</button>
+      <a id="openSpotifyLink" class="hidden" href="#" target="_blank" rel="noopener" style="align-self:center;color:var(--accent-2);font-size:.85rem">Öppna i Spotify</a>
+    </div>
+  </section>
+
+  <!-- ============ EDIT VIEW ============ -->
+  <section id="editView" class="hidden">
+    <div class="topbar">
+      <button id="editDoneBtn">← Klar</button>
+      <span class="counter" id="editTitle"></span>
+      <span></span>
+    </div>
+    <div class="panel">
+      <p class="hint">Tryck på raden där refrängen börjar. Markerade rader blir kortets innehåll.</p>
+      <div class="lyrics-list" id="lyricsList"></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- Constants ----------
+  const SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize";
+  const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
+  const SPOTIFY_API = "https://api.spotify.com/v1";
+  const SPOTIFY_SCOPES = "playlist-read-private playlist-read-collaborative";
+  const LYRICS_API = "https://lrclib.net/api";
+  const LYRICS_CONCURRENCY = 3;
+  const MAX_CHORUS_LINES = 8;
+  const STORAGE_PREFIX = "singsing.";
+
+  const redirectUri = location.origin + location.pathname;
+
+  // ---------- Safe storage helpers ----------
+  const storage = {
+    get(key, fallback = null) {
+      try {
+        const raw = localStorage.getItem(STORAGE_PREFIX + key);
+        return raw === null ? fallback : JSON.parse(raw);
+      } catch { return fallback; }
+    },
+    set(key, value) {
+      try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); } catch { /* ignore */ }
+    },
+    remove(key) {
+      try { localStorage.removeItem(STORAGE_PREFIX + key); } catch { /* ignore */ }
+    }
+  };
+
+  // ---------- DOM ----------
+  const $ = (id) => document.getElementById(id);
+  const views = { setup: $("setupView"), game: $("gameView"), edit: $("editView") };
+
+  function showView(name) {
+    Object.entries(views).forEach(([key, el]) => el.classList.toggle("hidden", key !== name));
+    window.scrollTo(0, 0);
+  }
+
+  function setStatus(message, isError = false) {
+    $("status").textContent = message;
+    $("status").classList.toggle("error", isError);
+  }
+
+  function setProgress(done, total) {
+    const bar = $("progressBar");
+    if (total <= 0) { bar.classList.add("hidden"); return; }
+    bar.classList.remove("hidden");
+    bar.firstElementChild.style.width = Math.round((done / total) * 100) + "%";
+  }
+
+  // ---------- Settings ----------
+  const settings = Object.assign({
+    promptCount: 2,
+    continuationCount: 4,
+    hideSong: true,
+    includeUncertain: true
+  }, storage.get("settings", {}));
+
+  function bindSettings() {
+    $("promptCount").value = String(settings.promptCount);
+    $("continuationCount").value = String(settings.continuationCount);
+    $("hideSong").checked = settings.hideSong;
+    $("includeUncertain").checked = settings.includeUncertain;
+
+    const save = () => {
+      settings.promptCount = Number($("promptCount").value);
+      settings.continuationCount = Number($("continuationCount").value);
+      settings.hideSong = $("hideSong").checked;
+      settings.includeUncertain = $("includeUncertain").checked;
+      storage.set("settings", settings);
+    };
+    ["promptCount", "continuationCount", "hideSong", "includeUncertain"]
+      .forEach((id) => $(id).addEventListener("change", save));
+  }
+
+  // ---------- Tabs ----------
+  function selectTab(tab) {
+    $("tabSpotify").classList.toggle("active", tab === "spotify");
+    $("tabText").classList.toggle("active", tab === "text");
+    $("sourceSpotify").classList.toggle("hidden", tab !== "spotify");
+    $("sourceText").classList.toggle("hidden", tab !== "text");
+  }
+
+  // =====================================================================
+  // Spotify authentication (Authorization Code with PKCE)
+  // =====================================================================
+  function randomString(length) {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    const values = crypto.getRandomValues(new Uint8Array(length));
+    return Array.from(values, (v) => chars[v % chars.length]).join("");
+  }
+
+  async function sha256Base64Url(text) {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+    return btoa(String.fromCharCode(...new Uint8Array(digest)))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  async function startSpotifyLogin() {
+    const clientId = $("clientId").value.trim();
+    if (!clientId) { setStatus("Fyll i ditt Spotify Client ID först.", true); return; }
+    if (location.protocol === "file:") {
+      setStatus("Spotify-inloggning fungerar inte när filen öppnas direkt. Kör sidan via http://127.0.0.1 (se instruktionen) eller använd fliken \"Klistra in låtar\".", true);
+      return;
+    }
+    if (!window.crypto || !crypto.subtle) {
+      setStatus("Webbläsaren saknar stöd för säker inloggning här. Öppna sidan via http://127.0.0.1 eller https.", true);
+      return;
+    }
+    storage.set("clientId", clientId);
+    storage.set("pendingPlaylist", $("playlistUrl").value.trim());
+
+    const verifier = randomString(64);
+    storage.set("pkceVerifier", verifier);
+    const challenge = await sha256Base64Url(verifier);
+
+    const params = new URLSearchParams({
+      response_type: "code",
+      client_id: clientId,
+      scope: SPOTIFY_SCOPES,
+      code_challenge_method: "S256",
+      code_challenge: challenge,
+      redirect_uri: redirectUri
+    });
+    location.href = SPOTIFY_AUTH_URL + "?" + params.toString();
+  }
+
+  async function handleSpotifyRedirect() {
+    const params = new URLSearchParams(location.search);
+    const code = params.get("code");
+    const error = params.get("error");
+    if (!code && !error) return false;
+
+    history.replaceState(null, "", redirectUri);
+    if (error) { setStatus("Spotify-inloggningen avbröts: " + error, true); return false; }
+
+    const verifier = storage.get("pkceVerifier");
+    const clientId = storage.get("clientId");
+    if (!verifier || !clientId) { setStatus("Inloggningen kunde inte slutföras. Försök igen.", true); return false; }
+
+    const body = new URLSearchParams({
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: redirectUri,
+      client_id: clientId,
+      code_verifier: verifier
+    });
+    const response = await fetch(SPOTIFY_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.access_token) {
+      setStatus("Kunde inte hämta token från Spotify: " + (data.error_description || data.error || response.status), true);
+      return false;
+    }
+    saveToken(data);
+    storage.remove("pkceVerifier");
+    return true;
+  }
+
+  function saveToken(data) {
+    const current = storage.get("token", {}) || {};
+    storage.set("token", {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token || current.refreshToken || null,
+      expiresAt: Date.now() + (data.expires_in - 60) * 1000
+    });
+  }
+
+  async function getAccessToken() {
+    const token = storage.get("token");
+    if (!token) return null;
+    if (Date.now() < token.expiresAt) return token.accessToken;
+    if (!token.refreshToken) return null;
+
+    const body = new URLSearchParams({
+      grant_type: "refresh_token",
+      refresh_token: token.refreshToken,
+      client_id: storage.get("clientId") || ""
+    });
+    const response = await fetch(SPOTIFY_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body
+    });
+    if (!response.ok) { storage.remove("token"); return null; }
+    const data = await response.json();
+    saveToken(data);
+    return data.access_token;
+  }
+
+  async function updateLoginState() {
+    const token = await getAccessToken().catch(() => null);
+    $("loginState").textContent = token ? "✓ Inloggad" : "";
+    $("loginBtn").textContent = token ? "Logga in igen" : "Logga in med Spotify";
+  }
+
+  // =====================================================================
+  // Spotify playlist
+  // =====================================================================
+  function parsePlaylistId(input) {
+    const text = (input || "").trim();
+    const urlMatch = text.match(/playlist[/:]([A-Za-z0-9]{10,})/);
+    if (urlMatch) return urlMatch[1];
+    if (/^[A-Za-z0-9]{10,}$/.test(text)) return text;
+    return null;
+  }
+
+  async function spotifyGet(url, accessToken) {
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const response = await fetch(url, { headers: { Authorization: "Bearer " + accessToken } });
+      if (response.status === 429) {
+        const waitSeconds = Number(response.headers.get("Retry-After") || 2);
+        await sleep(waitSeconds * 1000);
+        continue;
+      }
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        const error = new Error((data.error && data.error.message) || ("HTTP " + response.status));
+        error.status = response.status;
+        throw error;
+      }
+      return response.json();
+    }
+    throw new Error("Spotify svarar inte (för många anrop).");
+  }
+
+  async function fetchPlaylistTracks(playlistId, accessToken) {
+    const tracks = [];
+    let skipped = 0;
+    let total = null;
+    let url = `${SPOTIFY_API}/playlists/${playlistId}/items?limit=50&offset=0`;
+    while (url) {
+      const page = await spotifyGet(url, accessToken);
+      if (total === null && typeof page.total === "number") total = page.total;
+      for (const entry of page.items || []) {
+        // Newer API returns "item", older returned "track"
+        const track = entry.item || entry.track;
+        if (!track || track.type !== "track" || track.is_local) { skipped++; continue; }
+        tracks.push({
+          title: track.name,
+          artist: (track.artists || []).map((a) => a.name).join(", "),
+          mainArtist: track.artists && track.artists[0] ? track.artists[0].name : "",
+          album: track.album ? track.album.name : "",
+          durationSec: track.duration_ms ? Math.round(track.duration_ms / 1000) : null,
+          spotifyUrl: track.external_urls ? track.external_urls.spotify : null
+        });
+      }
+      url = page.next;
+      setStatus(`Hämtar låtar från spellistan… ${tracks.length}`);
+    }
+    return { tracks, skipped, total };
+  }
+
+  // =====================================================================
+  // Text list
+  // =====================================================================
+  function parseTrackText(text) {
+    return text.split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split(/\s+[-–—]\s+|\t/);
+        if (parts.length < 2) return { title: line, artist: "", mainArtist: "" };
+        const artist = parts[0].trim();
+        const title = parts.slice(1).join(" - ").trim();
+        return { title, artist, mainArtist: artist, album: "", durationSec: null, spotifyUrl: null };
+      });
+  }
+
+  // =====================================================================
+  // Lyrics lookup (LRCLIB)
+  // =====================================================================
+  function cleanTitle(title) {
+    return title
+      .replace(/\s*[-–]\s*(.*?)(remaster|version|edit|mix|live|mono|stereo|bonus|demo|acoustic|from|feat).*$/i, "")
+      .replace(/\s*[([].*?[)\]]/g, "")
+      .trim();
+  }
+
+  /**
+   * GET JSON with retries. Returns { ok, status, data }.
+   * Retries on rate limiting (429), server errors (5xx) and network failures,
+   * so a busy server does not make a song look like it has no lyrics.
+   */
+  async function getJsonWithRetry(url, maxAttempts = 3) {
+    let lastStatus = 0;
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const response = await fetch(url);
+        lastStatus = response.status;
+        if (response.ok) {
+          const data = await response.json().catch(() => null);
+          return { ok: true, status: response.status, data };
+        }
+        if (response.status === 404) return { ok: false, status: 404, data: null };
+        if (response.status !== 429 && response.status < 500) {
+          return { ok: false, status: response.status, data: null };
+        }
+        const retryAfter = Number(response.headers.get("Retry-After"));
+        await sleep(retryAfter > 0 ? retryAfter * 1000 : 1000 * 2 ** attempt);
+      } catch {
+        lastStatus = -1; // network error
+        await sleep(1000 * 2 ** attempt);
+      }
+    }
+    return { ok: false, status: lastStatus, data: null, failed: true };
+  }
+
+  async function getExactLyrics(track) {
+    const params = new URLSearchParams({
+      track_name: track.title,
+      artist_name: track.mainArtist || track.artist,
+      album_name: track.album,
+      duration: String(track.durationSec)
+    });
+    const result = await getJsonWithRetry(`${LYRICS_API}/get?` + params.toString());
+    if (result.failed) throw new Error("lyrics-request-failed");
+    return result.ok ? result.data : null;
+  }
+
+  async function searchLyrics(params) {
+    const url = `${LYRICS_API}/search?` + new URLSearchParams(params).toString();
+    const result = await getJsonWithRetry(url);
+    if (result.failed) throw new Error("lyrics-request-failed");
+    return result.ok && Array.isArray(result.data) ? result.data : [];
+  }
+
+  function pickBestLyrics(results, durationSec) {
+    const usable = results.filter((r) => r && !r.instrumental && r.plainLyrics && r.plainLyrics.trim());
+    if (!usable.length) return null;
+    if (!durationSec) return usable[0];
+    return usable
+      .map((r) => ({ r, diff: Math.abs((r.duration || 0) - durationSec) }))
+      .sort((a, b) => a.diff - b.diff)[0].r;
+  }
+
+  /**
+   * Returns { lyrics, reason } where reason is "found", "instrumental",
+   * "not-found" or "failed" (the lyrics server could not be reached).
+   */
+  async function fetchLyrics(track) {
+    const artist = track.mainArtist || track.artist;
+    const cleaned = cleanTitle(track.title);
+    let sawInstrumental = false;
+
+    // 1) Exact lookup when we know album and duration (Spotify source)
+    if (artist && track.album && track.durationSec) {
+      try {
+        const exact = await getExactLyrics(track);
+        if (exact && exact.instrumental) sawInstrumental = true;
+        if (exact && !exact.instrumental && exact.plainLyrics && exact.plainLyrics.trim()) {
+          return { lyrics: exact.plainLyrics, reason: "found" };
+        }
+      } catch { return { lyrics: null, reason: "failed" }; }
+    }
+
+    // 2) Searches, from strict to loose
+    const attempts = [];
+    if (artist) attempts.push({ track_name: track.title, artist_name: artist });
+    if (artist && cleaned !== track.title) attempts.push({ track_name: cleaned, artist_name: artist });
+    attempts.push({ q: `${artist} ${cleaned}`.trim() });
+    if (cleaned) attempts.push({ track_name: cleaned });
+
+    for (const params of attempts) {
+      try {
+        const results = await searchLyrics(params);
+        if (results.some((r) => r && r.instrumental)) sawInstrumental = true;
+        const best = pickBestLyrics(filterByArtist(results, artist, params), track.durationSec);
+        if (best) return { lyrics: best.plainLyrics, reason: "found" };
+      } catch { return { lyrics: null, reason: "failed" }; }
+    }
+
+    if (sawInstrumental) return { lyrics: null, reason: "instrumental" };
+    return { lyrics: null, reason: "not-found" };
+  }
+
+  // A title-only search can hit a different song; require the artist to roughly match
+  function filterByArtist(results, artist, params) {
+    if (params.artist_name || !artist) return results;
+    const wanted = normalizeLine(artist);
+    return results.filter((r) => {
+      const got = normalizeLine(r.artistName || "");
+      return got && (got.includes(wanted) || wanted.includes(got));
+    });
+  }
+
+  // =====================================================================
+  // Chorus detection
+  // =====================================================================
+  function normalizeLine(line) {
+    return line.toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  /**
+   * Returns { start, length, confidence } where start/length refer to
+   * non-empty line indices in allLines (allLines keeps "" for stanza breaks).
+   */
+  function detectChorus(allLines) {
+    // Map of positions of non-empty lines
+    const positions = [];
+    allLines.forEach((line, i) => { if (line) positions.push(i); });
+    if (positions.length < 2) return null;
+    const flat = positions.map((i) => allLines[i]);
+    const norm = flat.map(normalizeLine);
+
+    // 1) Explicit section tags like [Chorus] / [Refräng]
+    const tagIndex = flat.findIndex((l) => /^\[?\s*(chorus|refrain|refräng|hook)\b/i.test(l));
+    if (tagIndex >= 0) {
+      let end = tagIndex + 1;
+      while (end < flat.length && !/^\[.*\]$/.test(flat[end]) && end - tagIndex <= MAX_CHORUS_LINES) {
+        if (positions[end] - positions[end - 1] > 1 && end > tagIndex + 1) break;
+        end++;
+      }
+      if (end - tagIndex - 1 >= 2) return toResult(tagIndex + 1, end - tagIndex - 1, "high");
+    }
+
+    // 2) Repeated stanzas (same first two lines)
+    const stanzas = [];
+    let current = null;
+    positions.forEach((pos, flatIdx) => {
+      if (!current || pos - positions[flatIdx - 1] > 1) {
+        current = { startFlat: flatIdx, length: 0 };
+        stanzas.push(current);
+      }
+      current.length++;
+    });
+    if (stanzas.length >= 3) {
+      const groups = new Map();
+      stanzas.forEach((s) => {
+        if (s.length < 2) return;
+        const key = norm[s.startFlat] + "|" + norm[s.startFlat + 1];
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(s);
+      });
+      let bestGroup = null;
+      for (const group of groups.values()) {
+        if (group.length < 2) continue;
+        if (!bestGroup || group.length > bestGroup.length) bestGroup = group;
+      }
+      if (bestGroup) {
+        const longest = bestGroup.reduce((a, b) => (b.length > a.length ? b : a));
+        return toResult(longest.startFlat, longest.length, "high");
+      }
+    }
+
+    // 3) Longest repeated run of consecutive lines
+    let best = { start: -1, length: 0 };
+    for (let i = 0; i < norm.length; i++) {
+      if (!norm[i]) continue;
+      for (let j = i + 1; j < norm.length; j++) {
+        if (norm[i] !== norm[j]) continue;
+        if (i > 0 && norm[i - 1] === norm[j - 1]) continue; // not the start of a run
+        let k = 0;
+        while (j + k < norm.length && i + k < j && norm[i + k] === norm[j + k]) k++;
+        if (k > best.length) best = { start: i, length: k };
+      }
+    }
+    if (best.length >= 2) return toResult(best.start, best.length, "medium");
+
+    // 4) Most repeated single line
+    const counts = new Map();
+    norm.forEach((n, i) => {
+      if (!n) return;
+      if (!counts.has(n)) counts.set(n, { count: 0, first: i });
+      counts.get(n).count++;
+    });
+    let topLine = null;
+    for (const entry of counts.values()) {
+      if (entry.count < 2) continue;
+      if (!topLine || entry.count > topLine.count) topLine = entry;
+    }
+    if (topLine) return toResult(topLine.first, 4, "low");
+
+    // 5) Nothing found: use the first lines so the card is still playable
+    return toResult(0, 4, "low");
+
+    function toResult(flatStart, length, confidence) {
+      const safeLength = Math.max(1, Math.min(length, MAX_CHORUS_LINES, flat.length - flatStart));
+      return { start: positions[flatStart], length: safeLength, confidence };
+    }
+  }
+
+  // Get non-empty lines from allLines starting at index, up to count lines
+  function takeLines(allLines, startIndex, count) {
+    const result = [];
+    for (let i = startIndex; i < allLines.length && result.length < count; i++) {
+      if (allLines[i]) result.push(allLines[i]);
+    }
+    return result;
+  }
+
+  // Index in allLines of the n:th non-empty line after startIndex (inclusive)
+  function indexAfter(allLines, startIndex, skipCount) {
+    let seen = 0;
+    for (let i = startIndex; i < allLines.length; i++) {
+      if (!allLines[i]) continue;
+      if (seen === skipCount) return i;
+      seen++;
+    }
+    return allLines.length;
+  }
+
+  function buildCardContent(card) {
+    const chorusLines = takeLines(card.lines, card.chorus.start, card.chorus.length);
+    const prompt = chorusLines.slice(0, settings.promptCount);
+    let continuation = chorusLines.slice(settings.promptCount, settings.promptCount + settings.continuationCount);
+    // Short chorus: fill continuation with the lines that follow it
+    if (continuation.length < Math.min(2, settings.continuationCount)) {
+      const after = indexAfter(card.lines, card.chorus.start, prompt.length);
+      continuation = takeLines(card.lines, after, settings.continuationCount);
+    }
+    return { prompt, continuation };
+  }
+
+  // =====================================================================
+  // Deck building
+  // =====================================================================
+  let deck = null;          // { name, cards: [...], order: [...], position }
+  let revealed = false;
+
+  async function buildDeck(tracks, deckName, sourceInfo = null) {
+    if (!tracks.length) { setStatus("Hittade inga låtar.", true); return; }
+    $("missingList").classList.add("hidden");
+    $("missingList").innerHTML = "";
+    $("summaryPanel").classList.add("hidden");
+    setDisabled(true);
+
+    const cards = [];
+    const results = { notFound: [], instrumental: [], failed: [], noChorus: [] };
+    let done = 0;
+    setProgress(0, tracks.length);
+    setStatus(`Hämtar låttexter… 0 / ${tracks.length}`);
+
+    async function processTrack(track) {
+      const { lyrics, reason } = await fetchLyrics(track)
+        .catch(() => ({ lyrics: null, reason: "failed" }));
+      if (lyrics) {
+        const lines = lyrics.split(/\r?\n/).map((l) => l.trim());
+        const chorus = detectChorus(lines);
+        if (chorus) cards.push({ ...track, lines, chorus });
+        else results.noChorus.push(track);
+      } else if (reason === "failed") {
+        results.failed.push(track);
+      } else if (reason === "instrumental") {
+        results.instrumental.push(track);
+      } else {
+        results.notFound.push(track);
+      }
+    }
+
+    // First pass, a few requests in parallel
+    let nextIndex = 0;
+    async function worker() {
+      while (nextIndex < tracks.length) {
+        const track = tracks[nextIndex++];
+        await processTrack(track);
+        done++;
+        setProgress(done, tracks.length);
+        setStatus(`Hämtar låttexter… ${done} / ${tracks.length}`);
+      }
+    }
+    await Promise.all(Array.from({ length: LYRICS_CONCURRENCY }, worker));
+
+    // Second pass: retry failed requests one at a time, slowly
+    if (results.failed.length) {
+      const retryList = results.failed.splice(0);
+      for (let i = 0; i < retryList.length; i++) {
+        setStatus(`Försöker igen med låtar som inte svarade… ${i + 1} / ${retryList.length}`);
+        await sleep(400);
+        await processTrack(retryList[i]);
+      }
+    }
+
+    setDisabled(false);
+    setProgress(0, 0);
+
+    const usable = settings.includeUncertain ? cards : cards.filter((c) => c.chorus.confidence !== "low");
+    const skippedUncertain = cards.length - usable.length;
+
+    showSummary({ tracks, usable, skippedUncertain, results, sourceInfo });
+
+    if (!usable.length) {
+      setStatus("Inga kort kunde skapas. Se sammanfattningen nedan.", true);
+      return;
+    }
+    setStatus("");
+    deck = { name: deckName, cards: usable, order: shuffledIndices(usable.length), position: 0 };
+    saveDeck();
+    refreshSavedDeckPanel();
+  }
+
+  function showSummary({ tracks, usable, skippedUncertain, results, sourceInfo }) {
+    const rows = [];
+    if (sourceInfo && sourceInfo.total != null) {
+      const warn = tracks.length < sourceInfo.total;
+      rows.push(row(`Låtar från Spotify`, `${tracks.length} av ${sourceInfo.total}`, warn));
+      if (sourceInfo.skipped) rows.push(row("Hoppade över (lokala filer/poddar)", sourceInfo.skipped));
+    } else {
+      rows.push(row("Låtar i listan", tracks.length));
+    }
+    rows.push(row("Kort skapade", usable.length));
+    if (results.notFound.length) rows.push(row("Text saknas i databasen", results.notFound.length));
+    if (results.instrumental.length) rows.push(row("Instrumentala", results.instrumental.length));
+    if (results.noChorus.length) rows.push(row("För kort text", results.noChorus.length));
+    if (results.failed.length) rows.push(row("Servern svarade inte", results.failed.length, true));
+    if (skippedUncertain) rows.push(row("Bortvalda (gissad refräng)", skippedUncertain));
+    $("summaryRows").innerHTML = rows.join("");
+
+    const lost = [
+      ...results.failed.map((t) => [t, "svarade inte"]),
+      ...results.notFound.map((t) => [t, "ingen text"]),
+      ...results.instrumental.map((t) => [t, "instrumental"]),
+      ...results.noChorus.map((t) => [t, "för kort text"])
+    ];
+    $("lostList").innerHTML = lost
+      .map(([t, why]) => `<li>${escapeHtml(t.artist)} – ${escapeHtml(t.title)} <span class="why">(${why})</span></li>`)
+      .join("");
+    $("lostDetails").classList.toggle("hidden", lost.length === 0);
+    $("lostCount").textContent = String(lost.length);
+    $("retryFailedBtn").classList.toggle("hidden", results.failed.length === 0);
+    lastFailedTracks = results.failed.slice();
+    $("startGameBtn").classList.toggle("hidden", usable.length === 0);
+    $("summaryPanel").classList.remove("hidden");
+    $("summaryPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+
+    function row(label, value, warn = false) {
+      return `<div class="summary-row${warn ? " warn" : ""}"><span>${escapeHtml(label)}</span><b>${escapeHtml(String(value))}</b></div>`;
+    }
+  }
+
+  let lastFailedTracks = [];
+
+  // Add cards for songs that failed earlier, without rebuilding the whole deck
+  async function retryFailed() {
+    if (!lastFailedTracks.length) return;
+    const existing = deck ? deck.cards : [];
+    const before = existing.length;
+    const tempName = deck ? deck.name : "Kortlek";
+    const retryTracks = lastFailedTracks.slice();
+    await buildDeck(retryTracks, tempName);
+    if (deck && existing.length) {
+      const merged = existing.concat(deck.cards.filter((c) => !existing.some((e) => e.title === c.title && e.artist === c.artist)));
+      deck = { name: tempName, cards: merged, order: shuffledIndices(merged.length), position: 0 };
+      saveDeck();
+      refreshSavedDeckPanel();
+      setStatus(`${merged.length - before} nya kort lades till. Totalt ${merged.length} kort.`);
+    }
+  }
+
+  function setDisabled(disabled) {
+    ["loadSpotifyBtn", "loadTextBtn", "loginBtn"].forEach((id) => { $(id).disabled = disabled; });
+  }
+
+  function shuffledIndices(length) {
+    const arr = Array.from({ length }, (_, i) => i);
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function saveDeck() { if (deck) storage.set("deck", deck); }
+
+  function refreshSavedDeckPanel() {
+    const saved = storage.get("deck");
+    const panel = $("savedDeckPanel");
+    if (saved && saved.cards && saved.cards.length) {
+      $("savedDeckInfo").textContent =
+        `${saved.name || "Kortlek"} – ${saved.cards.length} kort, kort ${Math.min(saved.position + 1, saved.cards.length)} av ${saved.cards.length}.`;
+      panel.classList.remove("hidden");
+    } else {
+      panel.classList.add("hidden");
+    }
+  }
+
+  // =====================================================================
+  // Game
+  // =====================================================================
+  function startGame() {
+    revealed = false;
+    showView("game");
+    renderCard();
+  }
+
+  function currentCard() {
+    if (!deck || !deck.cards.length) return null;
+    return deck.cards[deck.order[deck.position]];
+  }
+
+  function renderCard() {
+    const card = currentCard();
+    if (!card) { showView("setup"); refreshSavedDeckPanel(); return; }
+    const { prompt, continuation } = buildCardContent(card);
+
+    $("cardPrompt").innerHTML = prompt.map(escapeHtml).join("<br>");
+    $("cardContinuation").innerHTML = continuation.map(escapeHtml).join("<br>") || "<i>(ingen fortsättning)</i>";
+    $("cardContinuation").classList.toggle("concealed", !revealed);
+    $("cardSong").textContent = card.artist ? `${card.title} – ${card.artist}` : card.title;
+    $("cardSong").classList.toggle("concealed", settings.hideSong && !revealed);
+    $("cardBadge").classList.toggle("hidden", card.chorus.confidence !== "low");
+    $("tapHint").classList.toggle("hidden", revealed);
+    $("revealBtn").textContent = revealed ? "Dölj" : "Visa";
+    $("counter").textContent = `${deck.position + 1} / ${deck.cards.length}`;
+    $("prevBtn").disabled = deck.position === 0;
+    $("nextBtn").textContent = deck.position === deck.cards.length - 1 ? "Börja om" : "Nästa →";
+
+    const link = $("openSpotifyLink");
+    if (card.spotifyUrl) { link.href = card.spotifyUrl; link.classList.remove("hidden"); }
+    else link.classList.add("hidden");
+  }
+
+  function toggleReveal() { revealed = !revealed; renderCard(); }
+
+  function goTo(delta) {
+    if (!deck) return;
+    let next = deck.position + delta;
+    if (next >= deck.cards.length) {
+      deck.order = shuffledIndices(deck.cards.length);
+      next = 0;
+    }
+    if (next < 0) return;
+    deck.position = next;
+    revealed = false;
+    saveDeck();
+    renderCard();
+  }
+
+  function reshuffle() {
+    if (!deck) return;
+    deck.order = shuffledIndices(deck.cards.length);
+    deck.position = 0;
+    revealed = false;
+    saveDeck();
+    renderCard();
+  }
+
+  function removeCurrentCard() {
+    if (!deck) return;
+    const cardIndex = deck.order[deck.position];
+    deck.cards.splice(cardIndex, 1);
+    deck.order = deck.order.filter((i) => i !== cardIndex).map((i) => (i > cardIndex ? i - 1 : i));
+    if (deck.position >= deck.cards.length) deck.position = Math.max(0, deck.cards.length - 1);
+    revealed = false;
+    saveDeck();
+    renderCard();
+  }
+
+  // ---------- Edit chorus ----------
+  function openEditor() {
+    const card = currentCard();
+    if (!card) return;
+    $("editTitle").textContent = card.title;
+    renderLyricsList(card);
+    showView("edit");
+  }
+
+  function renderLyricsList(card) {
+    const list = $("lyricsList");
+    list.innerHTML = "";
+    const chorusEnd = indexAfter(card.lines, card.chorus.start, card.chorus.length);
+    card.lines.forEach((line, i) => {
+      const div = document.createElement("div");
+      if (!line) { div.className = "gap"; list.appendChild(div); return; }
+      div.textContent = line;
+      if (i === card.chorus.start) div.className = "chorus-start";
+      else if (i > card.chorus.start && i < chorusEnd) div.className = "in-chorus";
+      div.addEventListener("click", () => {
+        card.chorus = { start: i, length: stanzaLengthFrom(card.lines, i), confidence: "high" };
+        saveDeck();
+        renderLyricsList(card);
+      });
+      list.appendChild(div);
+    });
+    const startEl = list.querySelector(".chorus-start");
+    if (startEl) startEl.scrollIntoView({ block: "center" });
+  }
+
+  function stanzaLengthFrom(lines, start) {
+    let count = 0;
+    for (let i = start; i < lines.length && lines[i] && count < MAX_CHORUS_LINES; i++) count++;
+    // Very short stanza: allow it to continue past the break
+    return count >= 3 ? count : Math.min(MAX_CHORUS_LINES, Math.max(count, 5));
+  }
+
+  // ---------- Utilities ----------
+  function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+  // =====================================================================
+  // Event wiring
+  // =====================================================================
+  async function loadFromSpotify() {
+    const playlistId = parsePlaylistId($("playlistUrl").value);
+    if (!playlistId) { setStatus("Klistra in en giltig länk till en Spotify-spellista.", true); return; }
+    storage.set("clientId", $("clientId").value.trim());
+
+    const accessToken = await getAccessToken().catch(() => null);
+    if (!accessToken) { await startSpotifyLogin(); return; }
+
+    try {
+      setDisabled(true);
+      setStatus("Hämtar spellistan…");
+      let playlistName = "Spotify-lista";
+      try {
+        const meta = await spotifyGet(`${SPOTIFY_API}/playlists/${playlistId}?fields=name`, accessToken);
+        if (meta && meta.name) playlistName = meta.name;
+      } catch { /* name is optional */ }
+      const { tracks, skipped, total } = await fetchPlaylistTracks(playlistId, accessToken);
+      setDisabled(false);
+      if (!tracks.length) {
+        setStatus("Spotify gav inga låtar. Spotify släpper bara igenom spellistor du själv äger eller samarbetar på – kopiera låtarna till en egen lista och försök igen.", true);
+        return;
+      }
+      await buildDeck(tracks, playlistName, { total: total != null ? total : tracks.length + skipped, skipped });
+    } catch (error) {
+      setDisabled(false);
+      if (error.status === 401) { storage.remove("token"); setStatus("Inloggningen har gått ut – logga in igen.", true); updateLoginState(); }
+      else if (error.status === 403) setStatus("Spotify nekade åtkomst (403). Kontrollera att du äger spellistan, att ditt konto har Premium och att det är tillagt under User Management i din Spotify-app.", true);
+      else if (error.status === 404) setStatus("Spellistan hittades inte. Är länken rätt?", true);
+      else setStatus("Fel från Spotify: " + error.message, true);
+    }
+  }
+
+  function init() {
+    $("redirectUriText").textContent = redirectUri;
+    $("clientId").value = storage.get("clientId", "") || "";
+    bindSettings();
+    refreshSavedDeckPanel();
+
+    $("tabSpotify").addEventListener("click", () => selectTab("spotify"));
+    $("tabText").addEventListener("click", () => selectTab("text"));
+    if (location.protocol === "file:") selectTab("text");
+
+    $("loginBtn").addEventListener("click", startSpotifyLogin);
+    $("loadSpotifyBtn").addEventListener("click", loadFromSpotify);
+    $("loadTextBtn").addEventListener("click", () => {
+      const tracks = parseTrackText($("trackText").value);
+      buildDeck(tracks, "Egen lista");
+    });
+
+    $("startGameBtn").addEventListener("click", () => { if (deck) startGame(); });
+    $("retryFailedBtn").addEventListener("click", retryFailed);
+    $("resumeBtn").addEventListener("click", () => { deck = storage.get("deck"); if (deck) startGame(); });
+    $("clearDeckBtn").addEventListener("click", () => { storage.remove("deck"); deck = null; refreshSavedDeckPanel(); });
+
+    $("card").addEventListener("click", (e) => { if (!e.target.closest("a")) toggleReveal(); });
+    $("revealBtn").addEventListener("click", toggleReveal);
+    $("nextBtn").addEventListener("click", () => goTo(1));
+    $("prevBtn").addEventListener("click", () => goTo(-1));
+    $("shuffleBtn").addEventListener("click", reshuffle);
+    $("removeBtn").addEventListener("click", removeCurrentCard);
+    $("editBtn").addEventListener("click", openEditor);
+    $("editDoneBtn").addEventListener("click", () => { showView("game"); renderCard(); });
+    $("backBtn").addEventListener("click", () => { showView("setup"); refreshSavedDeckPanel(); });
+
+    // Swipe left/right on the card
+    let touchStartX = null;
+    $("card").addEventListener("touchstart", (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+    $("card").addEventListener("touchend", (e) => {
+      if (touchStartX === null) return;
+      const deltaX = e.changedTouches[0].clientX - touchStartX;
+      touchStartX = null;
+      if (Math.abs(deltaX) > 60) { e.preventDefault(); goTo(deltaX < 0 ? 1 : -1); }
+    });
+
+    // Keyboard: space = reveal, arrows = navigate
+    document.addEventListener("keydown", (e) => {
+      if (views.game.classList.contains("hidden")) return;
+      if (e.key === " ") { e.preventDefault(); toggleReveal(); }
+      else if (e.key === "ArrowRight") goTo(1);
+      else if (e.key === "ArrowLeft") goTo(-1);
+    });
+
+    // Returning from Spotify login
+    handleSpotifyRedirect()
+      .then((loggedIn) => {
+        updateLoginState();
+        const pending = storage.get("pendingPlaylist");
+        if (loggedIn && pending) {
+          storage.remove("pendingPlaylist");
+          $("playlistUrl").value = pending;
+          loadFromSpotify();
+        }
+      })
+      .catch((error) => setStatus("Inloggningsfel: " + error.message, true));
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
